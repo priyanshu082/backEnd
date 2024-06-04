@@ -14,4 +14,7 @@ const app=express();
  app.use(cookieParser()) //for accessing cookies and setting the cookies in browser
 
 
+ //(err,req,res,next) there are four things
+
+
 export {app}
