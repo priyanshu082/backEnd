@@ -5,6 +5,8 @@ const asyncHandler=(fn)=>{
     }
 }
 
+export { asyncHandler };
+
 //trycatch method
 /*
 const asyncHandler = (fn) => async (req, res, next) => {
@@ -19,7 +21,7 @@ const asyncHandler = (fn) => async (req, res, next) => {
 };
 */
 
-export { asyncHandler };
+
 
 //all other way of thinking this
 // const asyncHandler=()=>{}
