@@ -127,6 +127,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const { accessToken, refreshToken } = await generateAccessAndrefreshToken(
     user._id
   );
+  console.log(accessToken,refreshToken)
   //since we are not having the refresh token in the previous user so we will call once again for the user
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
@@ -147,8 +148,8 @@ const loginUser = asyncHandler(async (req, res) => {
         200,
         {
           user: loggedInUser,
-          refreshToken,
-          accessToken,
+          refreshToken:refreshToken,
+          accessToken:accessToken,
         },
         "User logged in successfully"
       )
