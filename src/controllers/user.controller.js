@@ -79,74 +79,106 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdUser, "User Registered"));
 });
 
-const generateAccessAndrefreshToken=async(userId)=>{
-    try {
-        const user=await User.findById(userId)
-        const accessToken=user.generateAccessToken()
-        const refreshToken=user.generateRefreshToken()
-        user.refreshToken=refreshToken
-        await user.save({validateBeforeSave:false});  //for stoping the eerror sshich come form saving in database by the fields which are required but we have already saved the required fields in database so we do not neet to check here the reuired fields are available or not thats why we use validateBeforeSave:false
+const generateAccessAndrefreshToken = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false }); //for stoping the eerror sshich come form saving in database by the fields which are required but we have already saved the required fields in database so we do not neet to check here the reuired fields are available or not thats why we use validateBeforeSave:false
 
-        return {accessToken,refreshToken}
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating access and refreh token"
+    );
+  }
+};
 
-    } catch (error) {
-        throw new ApiError(500,"Something went wrong while generating access and refreh token")
+const loginUser = asyncHandler(async (req, res) => {
+  //req.body se data
+  //username email password hai ya nahi
+  //find the user
+  //password check kro
+  //access and refresh token bnao
+  //send cookies
+
+  const { username, email, password } = req.body;
+
+  if (!username || !email) {
+    throw new ApiError(400, "username & email is required");
+  }
+
+  const user = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (user) {
+    throw new ApiError(404, "User doesn't exist");
+  }
+
+  const isPasswordCorrect = await user.isPasswordCorrect(password);
+
+  if (!isPasswordCorrect) {
+    throw new ApiError(401, "Password Incorrect");
+  }
+
+  const { accessToken, refreshToken } = await generateAccessAndrefreshToken(
+    user._id
+  );
+  //since we are not having the refresh token in the previous user so we will call once again for the user
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  //cookies sending part so we need some ooptions
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          refreshToken,
+          accessToken,
+        },
+        "User logged in successfully"
+      )
+    );
+});
+
+const logOutUser = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      //used for setting particular field
+      $set: {
+        refreshToken: undefined,
+      },
+    },
+    {
+      new: true,
     }
-}
+  );
 
-const loginUser=asyncHandler(async(req,res)=>{
-        //req.body se data
-        //username email password hai ya nahi
-        //find the user
-        //password check kro 
-        //access and refresh token bnao
-        //send cookies
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
 
-        const {username,email ,password}=req.body
+  return res
+  .status(200)
+  .clearCookie("accessToken",options)
+  .clearCookie("refreshToken",options)
+  .json(new ApiResponse(200,{},"user Logged Out successfully"))
+});
 
-        if(!username || !email){
-            throw new ApiError(400,"username & email is required")
-        }
-
-       const user = await User.findOne({
-            $or:[{username},{email}]
-        })
-
-        if(user){
-            throw new ApiError(404,"User doesn't exist")
-        }
-
-        const isPasswordCorrect =await user.isPasswordCorrect(password)
-
-        if(!isPasswordCorrect){
-            throw new ApiError(401,"Password Incorrect")
-        }
-
-        const {accessToken,refreshToken}=await generateAccessAndrefreshToken(user._id)
-//since we are not having the refresh token in the previous user so we will call once again for the user
-const loggedInUser=await User.findById(user._id).select("-password -refreshToken")
-
-//cookies sending part so we need some ooptions
-const options={
-    httpOnly:true,
-    secure:true,
-}
-
-return res
-.status(200)
-.cookie("accessToken",accessToken,options)
-.cookie("refreshToken",refreshToken,options)
-.json(
-    new ApiResponse(200,{
-        user:loggedInUser,
-        refreshToken,
-        accessToken
-    },"User logged in successfully")
-)
-
-
-})
-export {
-     registerUser,
-     loginUser
-     };
+export { registerUser, loginUser, logOutUser };
