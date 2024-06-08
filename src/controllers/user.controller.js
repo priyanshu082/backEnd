@@ -278,7 +278,7 @@ const updateAccountDetail=asyncHandler(async(req,res)=>{
     throw new ApiError(400,"All fields are required")
   }
 
-  const user=User.findByIdAndUpdate(
+  const user=await User.findByIdAndUpdate(
     req.user?._id,
     {
       //for saving the data we use $set
@@ -297,6 +297,73 @@ const updateAccountDetail=asyncHandler(async(req,res)=>{
   )
 })
 
+
+//it is good practise that we should we use separate end point for updating the user
+const avatarUpdate=asyncHandler(async(req,res)=>{
+  const avatarLocalPath=req.file?.path
+  if(!avatarLocalPath){
+    throw new ApiError(400,"Avatar files is missing")
+  }
+
+  const avatar=await uploadOnCloudinary(avatarLocalPath)
+  if(!avatar.url){
+    throw new ApiError(400,"Error while uploading the avatar")
+  }
+
+  const user=await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      //for saving the data we use $set
+      $set:{
+        avatar:avatar.url
+      }
+    },
+    {new:true} //new :true for returning new data of the saved user
+  ).select("-password")
+
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,user,"Avatar is updated ")
+  )
+
+})
+
+
+//update cover image
+const updateCoverImage=asyncHandler(async(req,res)=>{
+  const coverImageLocalPath=req.file?.path
+  if(!coverImageLocalPath){
+    throw new ApiError(400,"Cover Image file is missing")
+  }
+
+  const coverImage=await uploadOnCloudinary(coverImageLocalPath)
+
+  if(!coverImage.url){
+    throw new ApiError(400,"Error while uploading the coverImage")
+  }
+
+  const user=await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      //for saving the data we use $set
+      $set:{
+        coverImage:coverImage.url
+      }
+    },
+    {new:true} //new :true for returning new data of the saved user
+  ).select("-password")
+
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,user,"CoverImage is updated ")
+  )
+
+})
+
 export { 
   registerUser, 
   loginUser, 
@@ -304,5 +371,7 @@ export {
   refreshAccessToken,
   changeCurrentPassword,
   getCurrentUser,
-  updateAccountDetail
+  updateAccountDetail,
+  avatarUpdate,
+  updateCoverImage
  };
