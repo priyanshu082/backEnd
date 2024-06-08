@@ -237,6 +237,7 @@ const refreshAccessToken=asyncHandler(async(req,res)=>{
 
 })
 
+
 //change current passowrd
 const changeCurrentPassword=(asyncHandler(async(req,res)=>{
   const {oldPassword,newPassWord}=req.body 
@@ -257,4 +258,51 @@ const changeCurrentPassword=(asyncHandler(async(req,res)=>{
   return res.status(200).json(new ApiResponse(200,{},"Password is change"))
 }))
 
-export { registerUser, loginUser, logOutUser,refreshAccessToken };
+
+//getting current user
+const getCurrentUser=asyncHandler(async(req,res)=>{
+  // use middle before calling this router
+  //const user=await User.findById.apply(req.user?._id)
+
+  return res.status(200).json(
+    new ApiResponse(200,req.user,"Current user fetched")
+  )
+
+})
+
+
+//make a controller for changing the details for 
+const updateAccountDetail=asyncHandler(async(req,res)=>{
+  const {fullName,email}=req.body
+  if(!email || !fullName){
+    throw new ApiError(400,"All fields are required")
+  }
+
+  const user=User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      //for saving the data we use $set
+      $set:{
+        fullName,
+        email:email
+      }
+    },
+    {new:true} //new :true for returning new data of the saved user
+  ).select("-password")
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,user,"Account details updated")
+  )
+})
+
+export { 
+  registerUser, 
+  loginUser, 
+  logOutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetail
+ };
