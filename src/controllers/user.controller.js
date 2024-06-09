@@ -298,7 +298,7 @@ const updateAccountDetail=asyncHandler(async(req,res)=>{
 })
 
 
-//it is good practise that we should we use separate end point for updating the user
+//it is good practise that we should we use separate end point for updating the user and alsp add here utility that we should delte the old image after uploading the new image
 const avatarUpdate=asyncHandler(async(req,res)=>{
   const avatarLocalPath=req.file?.path
   if(!avatarLocalPath){
@@ -361,6 +361,87 @@ const updateCoverImage=asyncHandler(async(req,res)=>{
   .json(
     new ApiResponse(200,user,"CoverImage is updated ")
   )
+
+})
+
+
+//getting chnaale detail
+const getUserChannelProfile=asyncHandler(async(req,res)=>{
+  const {username}=req.params
+
+  if(!username?.trim()){
+    throw new ApiError(400,"username is missing")
+  }
+
+  const channel=await User.aggregate([
+    {
+      $match:{
+        username:username?.toLowerCase()
+      }
+    },
+    {
+      $lookup:{
+        from:"subscriptions",  //we will use Subscription but since when storing in data base makes all letter to lower case and add 's' in last
+        localField:"_id",
+        foreignField:"channel",
+        as:"subscribers"
+      }
+    },
+    {
+      $lookup:{
+        from:"subscriptions",  //we will use Subscription but since when storing in data base makes all letter to lower case and add 's' in last
+        localField:"_id",
+        foreignField:"subscriber",
+        as:"subscribedTo"
+      }
+    },
+    {
+      $addFields:{
+        subscriberCount:{
+          $size:"subscribers"
+        },
+        channelsSubscribedToCount:{
+          $size:"subscribedTo"
+        },
+        isSubscribed:{
+          $cond:{
+            if:{$in:[req.user?._id , "$subscribers.subscriber"]},
+            then:true,
+            else:false
+          }
+        }
+      }
+    },
+    {
+      $project:{
+        fullName:1,
+        username:1,
+        subscriberCount:1,
+        channelsSubscribedToCount:1,
+        isSubscribed:1,
+        avatar:1,
+        coverImage:1,
+        email:1,
+      }
+    }
+  ])
+
+  // we will channel response in from of array
+
+  if(!channel?.length){
+   throw new ApiError(404,"channel is missing")
+  }
+
+
+  // we have passed channel[0]mas we got object inside the array
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,channel[0],"channel detail is fetched successfully")
+  )
+
+
 
 })
 
